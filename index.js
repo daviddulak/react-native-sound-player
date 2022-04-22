@@ -9,6 +9,7 @@ const { RNSoundPlayer } = NativeModules;
 const _soundPlayerEmitter = new NativeEventEmitter(RNSoundPlayer);
 let _finishedPlayingListener = null;
 let _finishedLoadingListener = null;
+let _audioInteruptListener = null;
 
 export default {
   playSoundFile: (name: string, type: string) => {
@@ -59,12 +60,25 @@ export default {
     );
   },
 
+  onAudioInterupt: (callback: (success: boolean) => any) => {
+    if (_audioInteruptListener) {
+      _audioInteruptListener.remove();
+      _audioInteruptListener = undefined;
+    }
+
+    _audioInteruptListener = _soundPlayerEmitter.addListener(
+      "AudioInterupt",
+      callback
+    );
+  },
+
   addEventListener: (
     eventName:
       | "FinishedLoading"
       | "FinishedPlaying"
       | "FinishedLoadingURL"
-      | "FinishedLoadingFile",
+      | "FinishedLoadingFile"
+      | "AudioInterupt",
     callback: Function
   ) => _soundPlayerEmitter.addListener(eventName, callback),
 
@@ -116,6 +130,11 @@ export default {
     if (_finishedLoadingListener) {
       _finishedLoadingListener.remove();
       _finishedLoadingListener = undefined;
+    }
+
+    if (_audioInteruptListener) {
+      _audioInteruptListener.remove();
+      _audioInteruptListener = undefined;
     }
   },
 };
