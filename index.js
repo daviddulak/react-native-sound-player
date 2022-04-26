@@ -82,6 +82,10 @@ export default {
     callback: Function
   ) => _soundPlayerEmitter.addListener(eventName, callback),
 
+  startAudioSession: () => {
+    RNSoundPlayer.startAudioSession();
+  },
+
   play: () => {
     // play and resume has the exact same implementation natively
     RNSoundPlayer.resume();

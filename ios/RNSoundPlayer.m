@@ -15,6 +15,9 @@ static NSString *const EVENT_FINISHED_PLAYING = @"FinishedPlaying";
 static NSString *const EVENT_AUDIO_INTERUPTION = @"AudioInterupt";
 
 
+RCT_EXPORT_METHOD(startAudioSession) {
+    [self startAudioSession];
+}
 
 RCT_EXPORT_METHOD(playUrl:(NSString *)url) {
     [self prepareUrl:url];
@@ -160,8 +163,10 @@ RCT_REMAP_METHOD(getInfo,
     }
     
     NSLog(@"--> mountSoundFile");
-    
     NSString *soundFilePath = [[NSBundle mainBundle] pathForResource:name ofType:type];
+    
+    //ensure we don't change the volume when we change the category type
+    float currentVolume = self.volume;
     
     if (soundFilePath == nil) {
         NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask, YES);
@@ -231,6 +236,129 @@ RCT_REMAP_METHOD(getInfo,
     [self sendEventWithName:EVENT_FINISHED_LOADING body:@{@"success": [NSNumber numberWithBool:true]}];
     [self sendEventWithName:EVENT_FINISHED_LOADING_URL body: @{@"success": [NSNumber numberWithBool:true], @"url": url}];
 }
+
+
+
+
+
+
+
+
+
+// handle session
+
+
+- (void)activateAudioSessionWithCategory:(NSString*)theCategory {
+    
+    //this is called from pollTether, so prevents overlap if it takes longer than 1s
+    if (_activatingAudioSession) {
+        NSLOG(@"--> Already trying to activate the audio session, skip this time");
+        return;
+    }
+    _activatingAudioSession = YES;
+    
+    //ensure we don't change the volume when we change the category type
+    float currentVolume = self.volume;
+    
+    NSLOG(@"--> Activating Audio Session and setting Category to %@", theCategory);
+    //Playback removes ability to detect headphones while connected to bluetooth
+    if (theCategory == nil) {
+        theCategory = [AVAudioSession sharedInstance].category;
+        NSLOG(@"--> Using current category of %@",theCategory);
+    }
+    NSError *theError = nil;
+    BOOL success = [[AVAudioSession sharedInstance] setCategory:theCategory withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker error:&theError];
+    if (!success) {
+        NSLOG(@"--> Error setting category! %@", theError);
+    }
+    
+    success = [[AVAudioSession sharedInstance] setActive:YES error:&theError];
+    if (!success) {
+        NSLOG(@"--> Error activating! %@", theError);
+        _alarmManager.isAudioSessionInterrupted = YES;
+    } else {
+        self.volume = currentVolume;
+        NSLOG(@"--> Activation Success!");
+        //we have control again, reset flag
+//        if (_alarmManager.isAudioSessionInterrupted) {
+//            //currently interrupted, but changing to NOT interrupted, so send Resume
+//            [self handleAudioSessionResume];
+//        }
+//        _alarmManager.isAudioSessionInterrupted = NO;
+    }
+    _activatingAudioSession = NO;
+}
+
+
+- (void)startAudioSession {
+    NSLOG(@"--> Starting Audio Session");
+
+    //activate the session first.  PlayAndRecord avoids bluetooth issues with tether detectionr
+    [self activateAudioSessionWithCategory:AVAudioSessionCategoryPlayAndRecord];
+
+    //setup lock screen to show the "song" info
+    MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+
+    commandCenter.previousTrackCommand.enabled = NO;
+    commandCenter.skipBackwardCommand.enabled = NO;
+    commandCenter.seekBackwardCommand.enabled = NO;
+    commandCenter.pauseCommand.enabled = NO;
+    commandCenter.playCommand.enabled = NO;
+    // Per stackoverflow, You must also register for any other command in order to take control
+    // of the command center, or else disabling other commands does not work.
+    // For example:
+    [commandCenter.playCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
+        return MPRemoteCommandHandlerStatusSuccess;
+    }];
+
+    /*** Manage the tetherTimer outside of this
+    //tether timer owned and controlled by SSAlarmManager
+    if (_alarmManager.tetherTimer != nil) {
+        [_alarmManager.tetherTimer invalidate];
+        _alarmManager.tetherTimer = nil;
+    }
+    CLS_LOG(@"Starting Tether Timer");
+    _alarmManager.tetherTimer = [NSTimer scheduledTimerWithTimeInterval:TETHER_TIMER_INTERVAL target:_alarmManager selector:@selector(pollTether:) userInfo:nil repeats:YES];
+     */
+    //detect the headphone pull
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:AVAudioSessionRouteChangeNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleAVAudioSessionRouteChangeNotification:)
+                                                 name:AVAudioSessionRouteChangeNotification
+                                               object:nil];
+
+    //handle interruptions like phone calls and siri
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:AVAudioSessionInterruptionNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleAVAudioSessionInterruptionNotification:)
+                                                 name:AVAudioSessionInterruptionNotification
+                                               object:nil];
+
+    //supposedly Mediaserverd resets are rare, but have been seen during development...
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:AVAudioSessionMediaServicesWereLostNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleAVAudioSessionMediaServicesWereLostNotification:)
+                                                 name:AVAudioSessionMediaServicesWereLostNotification
+                                               object:nil];
+
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:AVAudioSessionMediaServicesWereResetNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleAVAudioSessionMediaServicesWereResetNotification:)
+                                                 name:AVAudioSessionMediaServicesWereResetNotification
+                                               object:nil];
+
+//    [[MPMusicPlayerController systemMusicPlayer] beginGeneratingPlaybackNotifications];
+//
+//    // Listen for volume changes
+//    [[NSNotificationCenter defaultCenter] removeObserver:self name:MPMusicPlayerControllerVolumeDidChangeNotification object:nil];
+//    [[NSNotificationCenter defaultCenter] addObserver:self
+//                                             selector:@selector(handleVolumeChangeNotification:)
+//                                                 name:MPMusicPlayerControllerVolumeDidChangeNotification
+//                                               object:[MPMusicPlayerController systemMusicPlayer]];
+}
+
+
+
+
+
+
+// event handlers
 
 - (void)handleAVAudioSessionRouteChangeNotification:(NSNotification *)notification {
     //we do not want to mess around with volume during Timer sessions
