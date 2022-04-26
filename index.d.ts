@@ -32,8 +32,8 @@ declare module "react-native-sound-player" {
       eventName: SoundPlayerEvent,
       callback: (data: SoundPlayerEventData) => void
     ) => EmitterSubscription;
-    /** startAudioSession */
-    startAudioSession: () => void;
+    /** startSession */
+    startSession: () => void;
     /** Play the loaded sound file. This function is the same as `resume`. */
     play: () => void;
     /** Pause the currently playing file. */

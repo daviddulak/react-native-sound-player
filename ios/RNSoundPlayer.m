@@ -7,6 +7,7 @@
 #import "RNSoundPlayer.h"
 
 @implementation RNSoundPlayer
+@property (nonatomic) BOOL activatingAudioSession;
 
 static NSString *const EVENT_FINISHED_LOADING = @"FinishedLoading";
 static NSString *const EVENT_FINISHED_LOADING_FILE = @"FinishedLoadingFile";
@@ -15,7 +16,7 @@ static NSString *const EVENT_FINISHED_PLAYING = @"FinishedPlaying";
 static NSString *const EVENT_AUDIO_INTERUPTION = @"AudioInterupt";
 
 
-RCT_EXPORT_METHOD(startAudioSession) {
+RCT_EXPORT_METHOD(startSession) {
     [self startAudioSession];
 }
 
@@ -181,39 +182,7 @@ RCT_REMAP_METHOD(getInfo,
     [self.alertPlayer prepareToPlay];
     [[AVAudioSession sharedInstance]
             setCategory: AVAudioSessionCategoryPlayAndRecord
-            error: nil];
-    
-    //detect the headphone pull
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:AVAudioSessionRouteChangeNotification object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleAVAudioSessionRouteChangeNotification:)
-                                                 name:AVAudioSessionRouteChangeNotification
-                                               object:nil];
-
-    //handle interruptions like phone calls and siri
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:AVAudioSessionInterruptionNotification object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleAVAudioSessionInterruptionNotification:)
-                                                 name:AVAudioSessionInterruptionNotification
-                                               object:nil];
-
-    //supposedly Mediaserverd resets are rare, but have been seen during development...
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:AVAudioSessionMediaServicesWereLostNotification object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleAVAudioSessionMediaServicesWereLostNotification:)
-                                                 name:AVAudioSessionMediaServicesWereLostNotification
-                                               object:nil];
-
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:AVAudioSessionMediaServicesWereResetNotification object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleAVAudioSessionMediaServicesWereResetNotification:)
-                                                 name:AVAudioSessionMediaServicesWereResetNotification
-                                               object:nil];
-
-//    [[MPMusicPlayerController systemMusicPlayer] beginGeneratingPlaybackNotifications];
-//
-//    // Listen for volume changes
-//    [[NSNotificationCenter defaultCenter] removeObserver:self name:MPMusicPlayerControllerVolumeDidChangeNotification object:nil];
-//    [[NSNotificationCenter defaultCenter] addObserver:self
-//                                             selector:@selector(handleVolumeChangeNotification:)
-//                                                 name:MPMusicPlayerControllerVolumeDidChangeNotification
-//                                               object:[MPMusicPlayerController systemMusicPlayer]];
+     error: nil];
     
     [self sendEventWithName:EVENT_FINISHED_LOADING body:@{@"success": [NSNumber numberWithBool:true]}];
     [self sendEventWithName:EVENT_FINISHED_LOADING_FILE body:@{@"success": [NSNumber numberWithBool:true], @"name": name, @"type": type}];
@@ -252,7 +221,7 @@ RCT_REMAP_METHOD(getInfo,
     
     //this is called from pollTether, so prevents overlap if it takes longer than 1s
     if (_activatingAudioSession) {
-        NSLOG(@"--> Already trying to activate the audio session, skip this time");
+        NSLog(@"--> Already trying to activate the audio session, skip this time");
         return;
     }
     _activatingAudioSession = YES;
@@ -260,25 +229,25 @@ RCT_REMAP_METHOD(getInfo,
     //ensure we don't change the volume when we change the category type
     float currentVolume = self.volume;
     
-    NSLOG(@"--> Activating Audio Session and setting Category to %@", theCategory);
+    NSLog(@"--> Activating Audio Session and setting Category to %@", theCategory);
     //Playback removes ability to detect headphones while connected to bluetooth
     if (theCategory == nil) {
         theCategory = [AVAudioSession sharedInstance].category;
-        NSLOG(@"--> Using current category of %@",theCategory);
+        NSLog(@"--> Using current category of %@",theCategory);
     }
     NSError *theError = nil;
     BOOL success = [[AVAudioSession sharedInstance] setCategory:theCategory withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker error:&theError];
     if (!success) {
-        NSLOG(@"--> Error setting category! %@", theError);
+        NSLog(@"--> Error setting category! %@", theError);
     }
     
     success = [[AVAudioSession sharedInstance] setActive:YES error:&theError];
     if (!success) {
-        NSLOG(@"--> Error activating! %@", theError);
-        _alarmManager.isAudioSessionInterrupted = YES;
+        NSLog(@"--> Error activating! %@", theError);
+//        _alarmManager.isAudioSessionInterrupted = YES;
     } else {
         self.volume = currentVolume;
-        NSLOG(@"--> Activation Success!");
+        NSLog(@"--> Activation Success!");
         //we have control again, reset flag
 //        if (_alarmManager.isAudioSessionInterrupted) {
 //            //currently interrupted, but changing to NOT interrupted, so send Resume
@@ -291,25 +260,25 @@ RCT_REMAP_METHOD(getInfo,
 
 
 - (void)startAudioSession {
-    NSLOG(@"--> Starting Audio Session");
+    NSLog(@"--> Starting Audio Session");
 
     //activate the session first.  PlayAndRecord avoids bluetooth issues with tether detectionr
     [self activateAudioSessionWithCategory:AVAudioSessionCategoryPlayAndRecord];
 
     //setup lock screen to show the "song" info
-    MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
-
-    commandCenter.previousTrackCommand.enabled = NO;
-    commandCenter.skipBackwardCommand.enabled = NO;
-    commandCenter.seekBackwardCommand.enabled = NO;
-    commandCenter.pauseCommand.enabled = NO;
-    commandCenter.playCommand.enabled = NO;
-    // Per stackoverflow, You must also register for any other command in order to take control
-    // of the command center, or else disabling other commands does not work.
-    // For example:
-    [commandCenter.playCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
-        return MPRemoteCommandHandlerStatusSuccess;
-    }];
+//    MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+//
+//    commandCenter.previousTrackCommand.enabled = NO;
+//    commandCenter.skipBackwardCommand.enabled = NO;
+//    commandCenter.seekBackwardCommand.enabled = NO;
+//    commandCenter.pauseCommand.enabled = NO;
+//    commandCenter.playCommand.enabled = NO;
+//    // Per stackoverflow, You must also register for any other command in order to take control
+//    // of the command center, or else disabling other commands does not work.
+//    // For example:
+//    [commandCenter.playCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
+//        return MPRemoteCommandHandlerStatusSuccess;
+//    }];
 
     /*** Manage the tetherTimer outside of this
     //tether timer owned and controlled by SSAlarmManager

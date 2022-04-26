@@ -82,8 +82,8 @@ export default {
     callback: Function
   ) => _soundPlayerEmitter.addListener(eventName, callback),
 
-  startAudioSession: () => {
-    RNSoundPlayer.startAudioSession();
+  startSession: () => {
+    RNSoundPlayer.startSession();
   },
 
   play: () => {
