@@ -25,6 +25,8 @@ declare module "react-native-sound-player" {
     onFinishedPlaying: (callback: (success: boolean) => unknown) => void;
     /** @deprecated  please use addEventListener*/
     onFinishedLoading: (callback: (success: boolean) => unknown) => void;
+    /** @deprecated  please use addEventListener*/
+    onAudioInterupt: (callback: (success: boolean) => unknown) => void;
     /** Subscribe to any event. Returns a subscription object. Subscriptions created by this function cannot be removed by calling unmount(). You NEED to call yourSubscriptionObject.remove() when you no longer need this event listener or whenever your component unmounts. */
     addEventListener: (
       eventName: SoundPlayerEvent,

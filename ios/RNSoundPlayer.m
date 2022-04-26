@@ -145,10 +145,12 @@ RCT_REMAP_METHOD(getInfo,
 }
 
 - (void) audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag {
+    NSLog(@"--> audioPlayerDidFinishPlaying");
     [self sendEventWithName:EVENT_FINISHED_PLAYING body:@{@"success": [NSNumber numberWithBool:flag]}];
 }
 
 - (void) itemDidFinishPlaying:(NSNotification *) notification {
+    NSLog(@"--> itemDidFinishPlaying");
     [self sendEventWithName:EVENT_FINISHED_PLAYING body:@{@"success": [NSNumber numberWithBool:TRUE]}];
 }
 
@@ -156,6 +158,8 @@ RCT_REMAP_METHOD(getInfo,
     if (self.loopingPlayer) {
         self.loopingPlayer = nil;
     }
+    
+    NSLog(@"--> mountSoundFile");
     
     NSString *soundFilePath = [[NSBundle mainBundle] pathForResource:name ofType:type];
     
@@ -198,7 +202,7 @@ RCT_REMAP_METHOD(getInfo,
                                                object:nil];
 
 //    [[MPMusicPlayerController systemMusicPlayer] beginGeneratingPlaybackNotifications];
-//    
+//
 //    // Listen for volume changes
 //    [[NSNotificationCenter defaultCenter] removeObserver:self name:MPMusicPlayerControllerVolumeDidChangeNotification object:nil];
 //    [[NSNotificationCenter defaultCenter] addObserver:self
@@ -215,6 +219,8 @@ RCT_REMAP_METHOD(getInfo,
         self.alertPlayer = nil;
     }
     NSURL *soundURL = [NSURL URLWithString:url];
+    
+    NSLog(@"--> prepareUrl");
     
     if (!self.loopingPlayer) {
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(itemDidFinishPlaying:) name:AVPlayerItemDidPlayToEndTimeNotification object:nil];
