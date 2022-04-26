@@ -259,14 +259,14 @@ RCT_REMAP_METHOD(getInfo,
 - (void)handleAVAudioSessionMediaServicesWereLostNotification:(NSNotification *)notification {
     // @ if (![SSAlarmManager sharedInstance].isTetherSession) return;
     
-    CLS_LOG(@"--> Media Services Lost!");
+    NSLog(@"--> Media Services Lost!");
     // @ [_alarmManager sendSessionPause];
 }
 
 - (void)handleAVAudioSessionMediaServicesWereResetNotification:(NSNotification *)notification {
     // @ if (![SSAlarmManager sharedInstance].isTetherSession) return;
     
-    CLS_LOG(@"--> Media Services Reset!");
+    NSLog(@"--> Media Services Reset!");
     // @ [_alarmManager sendSessionResume];
 }
 
@@ -276,12 +276,12 @@ RCT_REMAP_METHOD(getInfo,
     
     NSInteger interruptReason = [notification.userInfo[AVAudioSessionInterruptionTypeKey] integerValue];
     if (interruptReason == AVAudioSessionInterruptionTypeBegan) {
-        CLS_LOG(@"--> Media Audio Session Interrupted!  Pausing");
+        NSLog(@"--> Media Audio Session Interrupted!  Pausing");
         [self sendEventWithName:EVENT_AUDIO_INTERUPTION body:@{@"success": [NSNumber numberWithBool:true]}];
         // @ [_alarmManager sendSessionPause];
     } else {
         //when resuming Audio, determine if we were on a Phone Call and handle that differently
-        CLS_LOG(@"--> Media Audio Session Interrupted!  Resume");
+        NSLog(@"--> Media Audio Session Interrupted!  Resume");
         [self sendEventWithName:EVENT_AUDIO_INTERUPTION body:@{@"success": [NSNumber numberWithBool:true]}];
         // @ [self handleAudioSessionResume];
     }

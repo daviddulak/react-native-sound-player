@@ -12,4 +12,9 @@
 @property (nonatomic, strong) AVAudioPlayer *player;
 @property (nonatomic, strong) AVPlayer *avPlayer;
 @property (nonatomic) int loopCount;
+
+@property (nonatomic) float headphoneVolume;
+@property (nonatomic) float speakerVolume;
+@property (nonatomic) float volume;
+
 @end
