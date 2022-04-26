@@ -18,7 +18,7 @@ static NSString *const EVENT_AUDIO_INTERUPTION = @"AudioInterupt";
 
 RCT_EXPORT_METHOD(playUrl:(NSString *)url) {
     [self prepareUrl:url];
-    [self.avPlayer play];
+    [self.loopingPlayer play];
 }
 
 RCT_EXPORT_METHOD(loadUrl:(NSString *)url) {
@@ -27,12 +27,12 @@ RCT_EXPORT_METHOD(loadUrl:(NSString *)url) {
 
 RCT_EXPORT_METHOD(playSoundFile:(NSString *)name ofType:(NSString *)type) {
     [self mountSoundFile:name ofType:type];
-    [self.player play];
+    [self.alertPlayer play];
 }
 
 RCT_EXPORT_METHOD(playSoundFileWithDelay:(NSString *)name ofType:(NSString *)type delay:(double)delay) {
     [self mountSoundFile:name ofType:type];
-    [self.player playAtTime:(self.player.deviceCurrentTime + delay)];
+    [self.alertPlayer playAtTime:(self.alertPlayer.deviceCurrentTime + delay)];
 }
 
 RCT_EXPORT_METHOD(loadSoundFile:(NSString *)name ofType:(NSString *)type) {
@@ -44,38 +44,38 @@ RCT_EXPORT_METHOD(loadSoundFile:(NSString *)name ofType:(NSString *)type) {
 }
 
 RCT_EXPORT_METHOD(pause) {
-    if (self.player != nil) {
-        [self.player pause];
+    if (self.alertPlayer != nil) {
+        [self.alertPlayer pause];
     }
-    if (self.avPlayer != nil) {
-        [self.avPlayer pause];
+    if (self.loopingPlayer != nil) {
+        [self.loopingPlayer pause];
     }
 }
 
 RCT_EXPORT_METHOD(resume) {
-    if (self.player != nil) {
-        [self.player play];
+    if (self.alertPlayer != nil) {
+        [self.alertPlayer play];
     }
-    if (self.avPlayer != nil) {
-        [self.avPlayer play];
+    if (self.loopingPlayer != nil) {
+        [self.loopingPlayer play];
     }
 }
 
 RCT_EXPORT_METHOD(stop) {
-    if (self.player != nil) {
-        [self.player stop];
+    if (self.alertPlayer != nil) {
+        [self.alertPlayer stop];
     }
-    if (self.avPlayer != nil) {
-        [self.avPlayer pause];
+    if (self.loopingPlayer != nil) {
+        [self.loopingPlayer pause];
     }
 }
 
 RCT_EXPORT_METHOD(seek:(float)seconds) {
-    if (self.player != nil) {
-        self.player.currentTime = seconds;
+    if (self.alertPlayer != nil) {
+        self.alertPlayer.currentTime = seconds;
     }
-    if (self.avPlayer != nil) {
-        [self.avPlayer seekToTime: CMTimeMakeWithSeconds(seconds, 1.0)];
+    if (self.loopingPlayer != nil) {
+        [self.loopingPlayer seekToTime: CMTimeMakeWithSeconds(seconds, 1.0)];
     }
 }
 
@@ -105,35 +105,35 @@ RCT_EXPORT_METHOD(setMixAudio:(BOOL) on) {
 }
 
 RCT_EXPORT_METHOD(setVolume:(float) volume) {
-    if (self.player != nil) {
-        [self.player setVolume: volume];
+    if (self.alertPlayer != nil) {
+        [self.alertPlayer setVolume: volume];
     }
-    if (self.avPlayer != nil) {
-        [self.avPlayer setVolume: volume];
+    if (self.loopingPlayer != nil) {
+        [self.loopingPlayer setVolume: volume];
     }
 }
 
 RCT_EXPORT_METHOD(setNumberOfLoops:(NSInteger) loopCount) {
     self.loopCount = loopCount;
-    if (self.player != nil) {
-        [self.player setNumberOfLoops:loopCount];
+    if (self.alertPlayer != nil) {
+        [self.alertPlayer setNumberOfLoops:loopCount];
     }
 }
 
 RCT_REMAP_METHOD(getInfo,
                  getInfoWithResolver:(RCTPromiseResolveBlock) resolve
                  rejecter:(RCTPromiseRejectBlock) reject) {
-    if (self.player != nil) {
+    if (self.alertPlayer != nil) {
         NSDictionary *data = @{
-            @"currentTime": [NSNumber numberWithDouble:[self.player currentTime]],
-            @"duration": [NSNumber numberWithDouble:[self.player duration]]
+            @"currentTime": [NSNumber numberWithDouble:[self.alertPlayer currentTime]],
+            @"duration": [NSNumber numberWithDouble:[self.alertPlayer duration]]
         };
         resolve(data);
         return;
     }
-    if (self.avPlayer != nil) {
-        CMTime currentTime = [[self.avPlayer currentItem] currentTime];
-        CMTime duration = [[[self.avPlayer currentItem] asset] duration];
+    if (self.loopingPlayer != nil) {
+        CMTime currentTime = [[self.loopingPlayer currentItem] currentTime];
+        CMTime duration = [[[self.loopingPlayer currentItem] asset] duration];
         NSDictionary *data = @{
             @"currentTime": [NSNumber numberWithFloat:CMTimeGetSeconds(currentTime)],
             @"duration": [NSNumber numberWithFloat:CMTimeGetSeconds(duration)]
@@ -153,8 +153,8 @@ RCT_REMAP_METHOD(getInfo,
 }
 
 - (void) mountSoundFile:(NSString *)name ofType:(NSString *)type {
-    if (self.avPlayer) {
-        self.avPlayer = nil;
+    if (self.loopingPlayer) {
+        self.loopingPlayer = nil;
     }
     
     NSString *soundFilePath = [[NSBundle mainBundle] pathForResource:name ofType:type];
@@ -166,10 +166,10 @@ RCT_REMAP_METHOD(getInfo,
     }
     
     NSURL *soundFileURL = [NSURL fileURLWithPath:soundFilePath];
-    self.player = [[AVAudioPlayer alloc] initWithContentsOfURL:soundFileURL error:nil];
-    [self.player setDelegate:self];
-    [self.player setNumberOfLoops:self.loopCount];
-    [self.player prepareToPlay];
+    self.alertPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:soundFileURL error:nil];
+    [self.alertPlayer setDelegate:self];
+    [self.alertPlayer setNumberOfLoops:self.loopCount];
+    [self.alertPlayer prepareToPlay];
     [[AVAudioSession sharedInstance]
             setCategory: AVAudioSessionCategoryPlayAndRecord
             error: nil];
@@ -211,17 +211,17 @@ RCT_REMAP_METHOD(getInfo,
 }
 
 - (void) prepareUrl:(NSString *)url {
-    if (self.player) {
-        self.player = nil;
+    if (self.alertPlayer) {
+        self.alertPlayer = nil;
     }
     NSURL *soundURL = [NSURL URLWithString:url];
     
-    if (!self.avPlayer) {
+    if (!self.loopingPlayer) {
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(itemDidFinishPlaying:) name:AVPlayerItemDidPlayToEndTimeNotification object:nil];
     }
     
-    self.avPlayer = [[AVPlayer alloc] initWithURL:soundURL];
-    [self.player prepareToPlay];
+    self.loopingPlayer = [[AVPlayer alloc] initWithURL:soundURL];
+    [self.alertPlayer prepareToPlay];
     [self sendEventWithName:EVENT_FINISHED_LOADING body:@{@"success": [NSNumber numberWithBool:true]}];
     [self sendEventWithName:EVENT_FINISHED_LOADING_URL body: @{@"success": [NSNumber numberWithBool:true], @"url": url}];
 }
