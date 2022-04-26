@@ -197,14 +197,14 @@ RCT_REMAP_METHOD(getInfo,
                                                  name:AVAudioSessionMediaServicesWereResetNotification
                                                object:nil];
 
-    [[MPMusicPlayerController systemMusicPlayer] beginGeneratingPlaybackNotifications];
-    
-    // Listen for volume changes
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:MPMusicPlayerControllerVolumeDidChangeNotification object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(handleVolumeChangeNotification:)
-                                                 name:MPMusicPlayerControllerVolumeDidChangeNotification
-                                               object:[MPMusicPlayerController systemMusicPlayer]];
+//    [[MPMusicPlayerController systemMusicPlayer] beginGeneratingPlaybackNotifications];
+//    
+//    // Listen for volume changes
+//    [[NSNotificationCenter defaultCenter] removeObserver:self name:MPMusicPlayerControllerVolumeDidChangeNotification object:nil];
+//    [[NSNotificationCenter defaultCenter] addObserver:self
+//                                             selector:@selector(handleVolumeChangeNotification:)
+//                                                 name:MPMusicPlayerControllerVolumeDidChangeNotification
+//                                               object:[MPMusicPlayerController systemMusicPlayer]];
     
     [self sendEventWithName:EVENT_FINISHED_LOADING body:@{@"success": [NSNumber numberWithBool:true]}];
     [self sendEventWithName:EVENT_FINISHED_LOADING_FILE body:@{@"success": [NSNumber numberWithBool:true], @"name": name, @"type": type}];
