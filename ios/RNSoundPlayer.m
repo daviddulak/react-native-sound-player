@@ -6,8 +6,11 @@
 
 #import "RNSoundPlayer.h"
 
-@implementation RNSoundPlayer
+@interface RNSoundPlayer ()
 @property (nonatomic) BOOL activatingAudioSession;
+@end
+
+@implementation RNSoundPlayer
 
 static NSString *const EVENT_FINISHED_LOADING = @"FinishedLoading";
 static NSString *const EVENT_FINISHED_LOADING_FILE = @"FinishedLoadingFile";
